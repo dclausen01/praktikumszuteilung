@@ -10,7 +10,9 @@
       "Bash(git branch:*)",
       "Bash(git push:*)",
       "Bash(git add:*)",
-      "Bash(git commit -m \"$(cat <<''EOF''\nVerbessertes Fehlerhandling für Routing-API\n\nÄnderungen:\n- Stille Behandlung von bekannten Routing-Fehlern (404 Code 2010: nicht-routingfähige Koordinaten)\n- Deaktivierung des ORS-Client-eigenen Retry-Systems (retry_over_query_limit=False)\n- Verbessertes Rate-Limit-Handling: 1x Retry mit 65s Wartezeit, dann Fallback\n- Reduzierung von Spam-Ausgaben bei normalen Routing-Problemen\n- Klare Unterscheidung zwischen erwarteten und unerwarteten Fehlern\n\nFallback-Strategie bleibt: Luftlinien-Schätzung (1km ≈ 1.5min Fahrzeit)\nEOF\n)\")"
+      "Bash(git commit -m \"$(cat <<''EOF''\nVerbessertes Fehlerhandling für Routing-API\n\nÄnderungen:\n- Stille Behandlung von bekannten Routing-Fehlern (404 Code 2010: nicht-routingfähige Koordinaten)\n- Deaktivierung des ORS-Client-eigenen Retry-Systems (retry_over_query_limit=False)\n- Verbessertes Rate-Limit-Handling: 1x Retry mit 65s Wartezeit, dann Fallback\n- Reduzierung von Spam-Ausgaben bei normalen Routing-Problemen\n- Klare Unterscheidung zwischen erwarteten und unerwarteten Fehlern\n\nFallback-Strategie bleibt: Luftlinien-Schätzung (1km ≈ 1.5min Fahrzeit)\nEOF\n)\")",
+      "Bash(timeout 30 python:*)",
+      "Bash(git commit:*)"
     ]
   }
 }

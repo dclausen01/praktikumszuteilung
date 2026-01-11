@@ -225,12 +225,26 @@ class PraktikumszuteilungTool:
                 score += self.config['scoring']['einrichtung_konsistenz']
                 reasons.append("Betreut bereits diese Einrichtung")
 
-        # Lastverteilung
+        # Lastverteilung - nur Abweichungen außerhalb von Soll ±1 bestrafen
         current_count = len(current_assignments.get(lehrkraft['Name'], []))
         soll_anzahl = lehrkraft['Soll_Anzahl_Betreuungen']
-        abweichung = abs(current_count - soll_anzahl)
-        score -= abweichung * self.config['scoring']['abweichung_soll_malus']
-        reasons.append(f"Ist/Soll: {current_count}/{soll_anzahl}")
+
+        # Bonus für Lehrkräfte, die unter Soll sind (je weiter unter Soll, desto höher der Bonus)
+        if current_count < soll_anzahl:
+            # Positiver Bonus für Lehrkräfte unter Soll (ausgeglichene Verteilung fördern)
+            bonus = (soll_anzahl - current_count) * 5
+            score += bonus
+            reasons.append(f"Ist/Soll: {current_count}/{soll_anzahl} (+{bonus})")
+        elif current_count == soll_anzahl:
+            # Exakt am Soll: leichter Malus, damit andere bevorzugt werden
+            score -= 10
+            reasons.append(f"Ist/Soll: {current_count}/{soll_anzahl} (-10)")
+        else:
+            # Über Soll: Malus
+            abweichung = current_count - soll_anzahl
+            malus = abweichung * self.config['scoring']['abweichung_soll_malus']
+            score -= malus
+            reasons.append(f"Ist/Soll: {current_count}/{soll_anzahl} (-{malus})")
 
         return score, " | ".join(reasons)
 

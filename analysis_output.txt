@@ -1,0 +1,48 @@
+=== LEHRKRÄFTE ===
+    Name         PLZ_Wohnort                 Klassen  Soll_Anzahl_Betreuungen
+0  BedbA          24111 Kiel          FSP25a, FSP25c                       10
+1  BrieK     24816 Hamweddel          FSP25c, FSP25d                        7
+2  HaasS          24107 Kiel          FSP25a, FSP25d                        9
+3  HaguT          24103 Kiel                  FSP25c                        8
+4  KreyB        24813 Schülp  FSP25a, FSP25c, FSP25d                        2
+5  SchaC       24113 Molfsee                  FSP25c                        6
+6  TiedA  25782 Tellingstedt          FSP25a, FSP25d                        8
+7  JessI      24811 Owschlag  FSP25a, FSP25c, FSP25d                        2
+8  TansK         24896 Treia                  FSP25a                        3
+
+=== SCHÜLERINNEN (Total: 52) ===
+Klassen: ['FSP25d', 'FSP25c', 'FSP25a']
+
+Klassen-Verteilung:
+Klasse
+FSP25d    18
+FSP25c    18
+FSP25a    16
+Name: count, dtype: int64
+
+=== BedbA Details ===
+PLZ: 24111 Kiel
+Klassen: FSP25a, FSP25c
+Soll: 10
+Parsed Klassen: ['FSP25a', 'FSP25c']
+Schülerinnen in BedbAs Klassen: 34
+Klassen-Breakdown:
+Klasse
+FSP25c    18
+FSP25a    16
+Name: count, dtype: int64
+
+=== ZUTEILUNG ===
+Total Zuweisungen: 52
+
+Zuweisungen pro Lehrkraft:
+Lehrkraft
+HaguT    9
+HaasS    9
+TiedA    9
+BrieK    8
+SchaC    7
+TansK    4
+JessI    3
+KreyB    3
+Name: count, dtype: int64

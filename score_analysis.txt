@@ -1,0 +1,15 @@
+=== BEISPIEL-ZUWEISUNGEN FSP25a ===
+         Schülerin  Klasse Lehrkraft  Score                                                           Begründung
+1  Alice Helmboldt  FSP25a     JessI    130  Unterrichtet in FSP25a | Umweg: 4.2 min (exzellent) | Ist/Soll: 1/2
+3  Narin  Youssef   FSP25a     KreyB    110  Unterrichtet in FSP25a | Umweg: 4.3 min (exzellent) | Ist/Soll: 0/2
+4   Sandra Schulz   FSP25a     KreyB    130  Unterrichtet in FSP25a | Umweg: 1.6 min (exzellent) | Ist/Soll: 1/2
+5      Shawna Blex  FSP25a     KreyB    150  Unterrichtet in FSP25a | Umweg: 2.6 min (exzellent) | Ist/Soll: 2/2
+6     Lars Federle  FSP25a     TansK     90  Unterrichtet in FSP25a | Umweg: 3.2 min (exzellent) | Ist/Soll: 0/3
+
+=== BEISPIEL-ZUWEISUNGEN FSP25c ===
+               Schülerin  Klasse Lehrkraft  Score                                                           Begründung
+2        Dorothea Pracht  FSP25c     JessI    150  Unterrichtet in FSP25c | Umweg: 2.4 min (exzellent) | Ist/Soll: 2/2
+10  Jan-Luca  Grunenberg  FSP25c     SchaC     30  Unterrichtet in FSP25c | Umweg: 3.6 min (exzellent) | Ist/Soll: 0/6
+11   Luca-Can Olschewski  FSP25c     SchaC     50  Unterrichtet in FSP25c | Umweg: 1.1 min (exzellent) | Ist/Soll: 1/6
+12      Anjelina Schramm  FSP25c     SchaC     70  Unterrichtet in FSP25c | Umweg: 3.8 min (exzellent) | Ist/Soll: 2/6
+13         Dominik Rumpf  FSP25c     SchaC     70        Unterrichtet in FSP25c | Umweg: 7.2 min (gut) | Ist/Soll: 3/6
