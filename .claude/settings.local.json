@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python beispiel_schuelerinnen.py:*)",
+      "Bash(dir:*)",
+      "Bash(python:*)",
+      "Bash(pip install:*)",
+      "Bash(timeout 180 python:*)",
+      "Bash(git init:*)"
+    ]
+  }
+}
