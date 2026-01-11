@@ -158,20 +158,40 @@ class PraktikumszuteilungTool:
 
     def _calculate_detour(self, lehrkraft_coords: Tuple[float, float],
                          einrichtung_coords: Tuple[float, float]) -> float:
-        """Berechnet zusätzliche Fahrzeit: (Wohnort → Einrichtung → Schule) - (Wohnort → Schule)"""
+        """
+        Bewertet die Erreichbarkeit der Einrichtung basierend auf:
+        - Entfernung von der Schule (Lehrkraft kann von Schule aus fahren)
+        - Entfernung vom Wohnort (Lehrkraft kann von Zuhause fahren)
+        - Umweg Wohnort → Einrichtung → Schule (auf dem Weg zur Schule)
+
+        Nimmt die günstigste Option als Bewertung.
+        """
         if not lehrkraft_coords or not einrichtung_coords:
             return 999  # Ungültige Koordinaten
 
-        # Direkter Weg: Wohnort → Schule
-        direct_duration = self._get_route_duration(lehrkraft_coords, self.schule_coords)
+        # Berechne relevante Fahrzeiten
+        schule_to_einrichtung = self._get_route_duration(self.schule_coords, einrichtung_coords)
+        wohnort_to_einrichtung = self._get_route_duration(lehrkraft_coords, einrichtung_coords)
 
-        # Umweg: Wohnort → Einrichtung → Schule
-        to_einrichtung = self._get_route_duration(lehrkraft_coords, einrichtung_coords)
-        einrichtung_to_school = self._get_route_duration(einrichtung_coords, self.schule_coords)
-        detour_duration = to_einrichtung + einrichtung_to_school
+        # Option 1: Direkt von Schule (z.B. nach dem Unterricht)
+        # Dies ist relevant für Einrichtungen nahe der Schule
+        from_school = schule_to_einrichtung
 
-        additional_time = detour_duration - direct_duration
-        return additional_time
+        # Option 2: Direkt von Wohnort (z.B. vor dem Unterricht)
+        # Dies ist relevant für Einrichtungen nahe dem Wohnort
+        from_home = wohnort_to_einrichtung
+
+        # Option 3: Umweg auf dem Weg zur/von der Schule
+        # Berechne ob Einrichtung auf dem Weg liegt
+        wohnort_to_schule = self._get_route_duration(lehrkraft_coords, self.schule_coords)
+        einrichtung_to_schule = self._get_route_duration(einrichtung_coords, self.schule_coords)
+        detour_via_einrichtung = (wohnort_to_einrichtung + einrichtung_to_schule) - wohnort_to_schule
+
+        # Wenn Umweg negativ oder klein ist, liegt Einrichtung günstig auf dem Weg
+        # Nimm das Minimum aller Optionen als "effektive Fahrtzeit"
+        effective_time = min(from_school, from_home, max(0, detour_via_einrichtung))
+
+        return effective_time
 
     def _is_within_capacity(self, lehrkraft: pd.Series, current_assignments: Dict[str, List[str]]) -> bool:
         """
@@ -197,25 +217,26 @@ class PraktikumszuteilungTool:
             score += self.config['scoring']['klassen_match']
             reasons.append(f"Unterrichtet in {schueler['Klasse']}")
 
-        # Kriterium 2 (Prio 2): Fahrzeit
+        # Kriterium 2 (Prio 2): Fahrzeit/Erreichbarkeit
         lehrkraft_plz = str(lehrkraft['PLZ_Wohnort'])
         lehrkraft_adresse = f"{lehrkraft_plz}, Deutschland"
         lehrkraft_coords = self._geocode(lehrkraft_adresse)
 
         if lehrkraft_coords and einrichtung_coords:
-            detour_min = self._calculate_detour(lehrkraft_coords, einrichtung_coords)
+            # _calculate_detour gibt jetzt die beste Fahrzeit zurück (von Schule, Wohnort oder als Umweg)
+            effective_travel_time = self._calculate_detour(lehrkraft_coords, einrichtung_coords)
 
-            if detour_min <= self.config['fahrzeit_grenzen']['exzellent_max_min']:
+            if effective_travel_time <= self.config['fahrzeit_grenzen']['exzellent_max_min']:
                 score += self.config['scoring']['fahrzeit_exzellent']
-                reasons.append(f"Umweg: {detour_min:.1f} min (exzellent)")
-            elif detour_min <= self.config['fahrzeit_grenzen']['gut_max_min']:
+                reasons.append(f"Fahrzeit: {effective_travel_time:.1f} min (exzellent)")
+            elif effective_travel_time <= self.config['fahrzeit_grenzen']['gut_max_min']:
                 score += self.config['scoring']['fahrzeit_gut']
-                reasons.append(f"Umweg: {detour_min:.1f} min (gut)")
-            elif detour_min <= self.config['fahrzeit_grenzen']['akzeptabel_max_min']:
+                reasons.append(f"Fahrzeit: {effective_travel_time:.1f} min (gut)")
+            elif effective_travel_time <= self.config['fahrzeit_grenzen']['akzeptabel_max_min']:
                 score += self.config['scoring']['fahrzeit_akzeptabel']
-                reasons.append(f"Umweg: {detour_min:.1f} min (akzeptabel)")
+                reasons.append(f"Fahrzeit: {effective_travel_time:.1f} min (akzeptabel)")
             else:
-                reasons.append(f"Umweg: {detour_min:.1f} min (ungünstig)")
+                reasons.append(f"Fahrzeit: {effective_travel_time:.1f} min (ungünstig)")
 
         # Kriterium 1 (Prio 3): Einrichtungskonsistenz
         einrichtung = schueler['Einrichtung']
