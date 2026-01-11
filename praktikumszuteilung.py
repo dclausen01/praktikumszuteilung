@@ -30,7 +30,8 @@ class PraktikumszuteilungTool:
             print("   Registrierung: https://openrouteservice.org/dev/#/signup")
             sys.exit(1)
 
-        self.ors_client = client.Client(key=self.api_key)
+        # ORS Client mit deaktiviertem Retry (wir behandeln Rate-Limits selbst)
+        self.ors_client = client.Client(key=self.api_key, retry_over_query_limit=False)
         self.geolocator = Nominatim(user_agent="praktikumszuteilung_tool")
         self.geocode_cache = {}
         self.route_cache = {}
@@ -87,10 +88,10 @@ class PraktikumszuteilungTool:
             return None
 
     def _get_route_duration(self, start_coords: Tuple[float, float],
-                           end_coords: Tuple[float, float], retry_count: int = 0) -> Optional[float]:
+                           end_coords: Tuple[float, float], retry_on_rate_limit: bool = True) -> Optional[float]:
         """
         Berechnet Fahrtzeit in Minuten zwischen zwei Koordinaten
-        Mit automatischem Retry bei Rate-Limit-Überschreitung
+        Mit Fallback auf Luftlinien-Schätzung bei Routing-Fehlern
         """
         cache_key = f"{start_coords}_{end_coords}"
         if cache_key in self.route_cache:
@@ -114,16 +115,28 @@ class PraktikumszuteilungTool:
             return duration_min
 
         except openrouteservice.exceptions.ApiError as e:
-            # Prüfe auf Rate-Limit-Fehler (HTTP 429)
-            if '429' in str(e) or 'rate limit' in str(e).lower():
-                if retry_count < 3:  # Max 3 Versuche
-                    print(f"⚠️  Rate-Limit erreicht. Warte 60 Sekunden...")
-                    time.sleep(60)
-                    print(f"   → Wiederhole Anfrage (Versuch {retry_count + 2}/3)")
-                    return self._get_route_duration(start_coords, end_coords, retry_count + 1)
+            error_str = str(e)
+
+            # Behandlung von Rate-Limit (HTTP 429)
+            if '429' in error_str or 'rate limit' in error_str.lower():
+                if retry_on_rate_limit:
+                    print(f"⚠️  Rate-Limit erreicht! Warte 65 Sekunden...")
+                    time.sleep(65)
+                    print(f"   → Setze Verarbeitung fort...")
+                    # Rekursiver Aufruf ohne weiteres Retry
+                    return self._get_route_duration(start_coords, end_coords, retry_on_rate_limit=False)
                 else:
-                    print(f"⚠️  Rate-Limit nach 3 Versuchen immer noch erreicht. Nutze Fallback.")
+                    print(f"⚠️  Rate-Limit bleibt, nutze Luftlinien-Schätzung")
+
+            # Stille Behandlung von bekannten Routing-Problemen
+            elif '404' in error_str and '2010' in error_str:
+                # Koordinate nicht routingfähig (z.B. auf Wiese/im Wasser) → stiller Fallback
+                pass
+            elif '2099' in error_str:
+                # Keine Route gefunden → stiller Fallback
+                pass
             else:
+                # Nur bei unerwarteten Fehlern ausgeben
                 print(f"⚠️  Routing-Fehler: {e}")
 
             # Fallback auf Luftlinie
@@ -133,7 +146,10 @@ class PraktikumszuteilungTool:
             return duration_min
 
         except Exception as e:
-            print(f"⚠️  Routing-Fehler: {e}")
+            # Nur unerwartete Fehler ausgeben
+            if 'rate limit' not in str(e).lower():
+                print(f"⚠️  Unerwarteter Routing-Fehler: {e}")
+
             # Fallback auf Luftlinie
             dist_km = geodesic(start_coords, end_coords).kilometers
             duration_min = dist_km * 1.5  # Schätzung: 1km ≈ 1.5min
