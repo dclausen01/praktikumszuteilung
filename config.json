@@ -3,15 +3,21 @@
   "schule_adresse": "Röhlingsweg 60, 24768 Rendsburg",
   "scoring": {
     "klassen_match": 100,
-    "fahrzeit_exzellent": 50,
-    "fahrzeit_gut": 30,
-    "fahrzeit_akzeptabel": 10,
+    "fahrzeit_exzellent": 80,
+    "fahrzeit_gut": 50,
+    "fahrzeit_akzeptabel": 20,
+    "fahrzeit_lang_malus": 30,
+    "fahrzeit_sehr_lang_malus": 60,
+    "rendsburg_bonus": 20,
     "einrichtung_konsistenz": 30,
     "abweichung_soll_malus": 20
   },
   "fahrzeit_grenzen": {
     "exzellent_max_min": 5,
     "gut_max_min": 10,
-    "akzeptabel_max_min": 20
-  }
+    "akzeptabel_max_min": 20,
+    "lang_min": 60,
+    "sehr_lang_min": 90
+  },
+  "rendsburg_plz_praefix": "2476"
 }

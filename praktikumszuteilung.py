@@ -159,37 +159,46 @@ class PraktikumszuteilungTool:
     def _calculate_detour(self, lehrkraft_coords: Tuple[float, float],
                          einrichtung_coords: Tuple[float, float]) -> float:
         """
-        Bewertet die Erreichbarkeit der Einrichtung basierend auf:
-        - Entfernung von der Schule (Lehrkraft kann von Schule aus fahren)
-        - Entfernung vom Wohnort (Lehrkraft kann von Zuhause fahren)
-        - Umweg Wohnort → Einrichtung → Schule (auf dem Weg zur Schule)
+        Bewertet die Erreichbarkeit der Einrichtung basierend auf GESAMT-Fahrtzeit (Hin + Rück):
+        - Option 1: Von Schule hin und zurück (Schule → Einrichtung → Schule)
+        - Option 2: Von Wohnort hin und zurück (Wohnort → Einrichtung → Wohnort)
+        - Option 3: Kompletter Weg Wohnort → Einrichtung → Schule → Wohnort
 
         Nimmt die günstigste Option als Bewertung.
+        WICHTIG: Alle Zeiten sind Gesamt-Fahrzeiten (round-trip), nicht nur Hinweg!
         """
         if not lehrkraft_coords or not einrichtung_coords:
             return 999  # Ungültige Koordinaten
 
-        # Berechne relevante Fahrzeiten
+        # Berechne relevante Fahrzeiten (einzelne Strecken)
         schule_to_einrichtung = self._get_route_duration(self.schule_coords, einrichtung_coords)
         wohnort_to_einrichtung = self._get_route_duration(lehrkraft_coords, einrichtung_coords)
-
-        # Option 1: Direkt von Schule (z.B. nach dem Unterricht)
-        # Dies ist relevant für Einrichtungen nahe der Schule
-        from_school = schule_to_einrichtung
-
-        # Option 2: Direkt von Wohnort (z.B. vor dem Unterricht)
-        # Dies ist relevant für Einrichtungen nahe dem Wohnort
-        from_home = wohnort_to_einrichtung
-
-        # Option 3: Umweg auf dem Weg zur/von der Schule
-        # Berechne ob Einrichtung auf dem Weg liegt
         wohnort_to_schule = self._get_route_duration(lehrkraft_coords, self.schule_coords)
         einrichtung_to_schule = self._get_route_duration(einrichtung_coords, self.schule_coords)
-        detour_via_einrichtung = (wohnort_to_einrichtung + einrichtung_to_schule) - wohnort_to_schule
 
-        # Wenn Umweg negativ oder klein ist, liegt Einrichtung günstig auf dem Weg
-        # Nimm das Minimum aller Optionen als "effektive Fahrtzeit"
-        effective_time = min(from_school, from_home, max(0, detour_via_einrichtung))
+        # Option 1: Von Schule aus (hin + zurück)
+        # Schule → Einrichtung → Schule
+        from_school_roundtrip = schule_to_einrichtung * 2
+
+        # Option 2: Von Wohnort aus (hin + zurück)
+        # Wohnort → Einrichtung → Wohnort
+        from_home_roundtrip = wohnort_to_einrichtung * 2
+
+        # Option 3: Kompletter Weg mit Einrichtung
+        # Wohnort → Einrichtung → Schule → Wohnort
+        # Dies ist relevant, wenn Lehrkraft auf dem Weg zur/von Schule die Einrichtung besuchen kann
+        complete_trip_via_einrichtung = wohnort_to_einrichtung + einrichtung_to_schule + wohnort_to_schule
+
+        # Vergleich mit direktem Weg Wohnort → Schule → Wohnort
+        normal_commute = wohnort_to_schule * 2
+
+        # Der "Umweg" ist die Differenz zum normalen Weg
+        # Wenn negativ, ist der Weg über Einrichtung sogar kürzer (liegt perfekt auf dem Weg)
+        detour_time = complete_trip_via_einrichtung - normal_commute
+
+        # Nimm das Minimum aller Optionen als "effektive Gesamt-Fahrtzeit"
+        # Detour-Zeit kann negativ sein, wenn Einrichtung perfekt auf dem Weg liegt - dann ist es effektiv 0
+        effective_time = min(from_school_roundtrip, from_home_roundtrip, max(0, detour_time))
 
         return effective_time
 
@@ -223,9 +232,10 @@ class PraktikumszuteilungTool:
         lehrkraft_coords = self._geocode(lehrkraft_adresse)
 
         if lehrkraft_coords and einrichtung_coords:
-            # _calculate_detour gibt jetzt die beste Fahrzeit zurück (von Schule, Wohnort oder als Umweg)
+            # _calculate_detour gibt jetzt die beste Gesamt-Fahrzeit zurück (round-trip!)
             effective_travel_time = self._calculate_detour(lehrkraft_coords, einrichtung_coords)
 
+            # Bonus für kurze Fahrzeiten
             if effective_travel_time <= self.config['fahrzeit_grenzen']['exzellent_max_min']:
                 score += self.config['scoring']['fahrzeit_exzellent']
                 reasons.append(f"Fahrzeit: {effective_travel_time:.1f} min (exzellent)")
@@ -237,6 +247,24 @@ class PraktikumszuteilungTool:
                 reasons.append(f"Fahrzeit: {effective_travel_time:.1f} min (akzeptabel)")
             else:
                 reasons.append(f"Fahrzeit: {effective_travel_time:.1f} min (ungünstig)")
+
+            # Malus für sehr lange Fahrzeiten
+            if effective_travel_time > self.config['fahrzeit_grenzen']['sehr_lang_min']:
+                malus = self.config['scoring']['fahrzeit_sehr_lang_malus']
+                score -= malus
+                reasons.append(f"Sehr lange Fahrt >{self.config['fahrzeit_grenzen']['sehr_lang_min']}min (-{malus})")
+            elif effective_travel_time > self.config['fahrzeit_grenzen']['lang_min']:
+                malus = self.config['scoring']['fahrzeit_lang_malus']
+                score -= malus
+                reasons.append(f"Lange Fahrt >{self.config['fahrzeit_grenzen']['lang_min']}min (-{malus})")
+
+            # Rendsburg-Bonus: Lehrkräfte aus Rendsburg-Umgebung erhalten Bonus für Rendsburg-Einrichtungen
+            einrichtung_plz = str(schueler['PLZ'])
+            if (lehrkraft_plz.startswith(self.config['rendsburg_plz_praefix']) and
+                einrichtung_plz.startswith(self.config['rendsburg_plz_praefix'])):
+                bonus = self.config['scoring']['rendsburg_bonus']
+                score += bonus
+                reasons.append(f"Rendsburg-Region (+{bonus})")
 
         # Kriterium 1 (Prio 3): Einrichtungskonsistenz
         einrichtung = schueler['Einrichtung']
